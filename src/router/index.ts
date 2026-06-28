@@ -25,11 +25,11 @@ const router = createRouter({
           name: 'Dashboard',
           component: () => import('@/views/dashboard/Dashboard.vue'),
         },
-        // {
-        //   path: 'users',
-        //   name: 'UserList',
-        //   component: () => import('@/views/system/user/UserList.vue'),
-        // },
+        {
+          path: 'users',
+          name: 'UserList',
+          component: () => import('@/views/system/user/UserList.vue'),
+        },
         // 其他页面...
       ],
     },

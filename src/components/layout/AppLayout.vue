@@ -2,6 +2,7 @@
   <el-container class="app-layout">
     <!-- 侧边栏 -->
     <el-aside width="220px">
+      <AppSidebar />
       <div class="logo">
         <span>ERP 管理系统</span>
       </div>

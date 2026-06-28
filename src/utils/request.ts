@@ -11,13 +11,8 @@ const request: AxiosInstance = axios.create({
 request.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
-    console.log('📤 请求拦截器:', config.url)
-    console.log('📤 当前 token:', token)
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
-      console.log('📤 已添加 Authorization 头')
-    } else {
-      console.log('📤 ⚠️ token 为空，未添加认证头')
     }
     return config
   },
