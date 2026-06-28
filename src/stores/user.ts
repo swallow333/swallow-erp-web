@@ -7,8 +7,11 @@ export const useUserStore = defineStore('user', {
   }),
   actions: {
     setToken(token: string) {
+      console.log('🔵 setToken 被调用了！') // 看这行有没有打印
+      console.log('🔵 传入的 token:', token)
       this.token = token
       localStorage.setItem('token', token)
+      console.log('🔵 localStorage 已更新:', localStorage.getItem('token'))
     },
     setUserInfo(info: any) {
       this.userInfo = info

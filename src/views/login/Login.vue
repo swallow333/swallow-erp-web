@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
@@ -49,11 +49,17 @@ const handleLogin = async () => {
   loading.value = true
   try {
     const res = await request.post('/auth/login', form.value)
-    if (res.code === 200) {
+    // ✅ 正确：token 在 data.token 里
+    if (res.code === 200 && res.data?.token) {
+      console.log('准备调用 setToken，token:', res.data.token)
       userStore.setToken(res.data.token)
+      console.log('调用完成，检查 localStorage:', localStorage.getItem('token'))
       userStore.setUserInfo(res.data.user)
-      ElMessage.success(res.message)
+      await nextTick()
+      ElMessage.success('登录成功')
       router.push('/dashboard')
+    } else {
+      ElMessage.error(res.message || '登录失败')
     }
   } catch (error: any) {
     ElMessage.error(error.message || '登录失败')
