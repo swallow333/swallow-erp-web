@@ -26,15 +26,10 @@
           <span>用户管理</span>
         </el-menu-item>
       </el-sub-menu>
-
-      <el-sub-menu index="product">
-        <template #title>
-          <el-icon><Goods /></el-icon>
-          <span>商品管理</span>
-        </template>
-        <el-menu-item index="/dashboard/categories">分类管理</el-menu-item>
-        <el-menu-item index="/dashboard/products">商品列表</el-menu-item>
-      </el-sub-menu>
+      <el-menu-item index="/dashboard/products">
+        <el-icon><Goods /></el-icon>
+        <span>商品列表</span>
+      </el-menu-item>
 
       <el-menu-item index="/dashboard/suppliers">
         <el-icon><Truck /></el-icon>
@@ -75,6 +70,7 @@ import {
   ShoppingCart,
   Sell,
   Box,
+  Fold,
 } from '@element-plus/icons-vue'
 </script>
 

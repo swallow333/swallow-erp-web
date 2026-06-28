@@ -30,6 +30,16 @@ const router = createRouter({
           name: 'UserList',
           component: () => import('@/views/system/user/UserList.vue'),
         },
+        {
+          path: 'products',
+          name: 'ProductList',
+          component: () => import('@/views/product/ProductList.vue'),
+        },
+        {
+          path: 'categories',
+          name: 'CategoryList',
+          component: () => import('@/views/product/CategoryList.vue'),
+        },
         // 其他页面...
       ],
     },
