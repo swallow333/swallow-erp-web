@@ -43,6 +43,11 @@ const router = createRouter({
           name: 'CategoryList',
           component: () => import('@/views/product/CategoryList.vue'),
         },
+        {
+          path: 'suppliers',
+          name: 'SupplierList',
+          component: () => import('@/views/supplier/SupplierList.vue'),
+        },
         // 其他页面...
       ],
     },
