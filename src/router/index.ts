@@ -58,6 +58,11 @@ const router = createRouter({
           name: 'InventoryList',
           component: () => import('@/views/inventory/InventoryList.vue'),
         },
+        {
+          path: 'sale-orders',
+          name: 'SaleOrderList',
+          component: () => import('@/views/sale/SaleOrderList.vue'),
+        },
         // 其他页面...
       ],
     },
