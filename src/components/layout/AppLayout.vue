@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import AppSidebar from './AppSidebar.vue'
 import { useUserStore } from '@/stores/user'
-import { Odometer, User, ArrowDown } from '@element-plus/icons-vue'
+import { User, ArrowDown } from '@element-plus/icons-vue'
+import AppSidebar from './AppSidebar.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -22,26 +22,6 @@ const handleCommand = (command: string) => {
     <!-- 侧边栏 -->
     <el-aside width="220px">
       <AppSidebar />
-      <div class="logo">
-        <span>ERP 管理系统</span>
-      </div>
-      <el-menu
-        :default-active="$route.path"
-        class="sidebar-menu"
-        background-color="#001529"
-        text-color="#fff"
-        active-text-color="#409eff"
-        router
-      >
-        <el-menu-item index="/dashboard/index">
-          <el-icon><Odometer /></el-icon>
-          <span>首页</span>
-        </el-menu-item>
-        <el-menu-item index="/dashboard/users">
-          <el-icon><User /></el-icon>
-          <span>用户管理</span>
-        </el-menu-item>
-      </el-menu>
     </el-aside>
 
     <!-- 主内容 -->
@@ -76,22 +56,6 @@ const handleCommand = (command: string) => {
 <style scoped>
 .app-layout {
   height: 100vh;
-}
-
-.logo {
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 18px;
-  font-weight: 600;
-  background: #002140;
-}
-
-.sidebar-menu {
-  height: calc(100vh - 60px);
-  border-right: none;
 }
 
 .el-header {

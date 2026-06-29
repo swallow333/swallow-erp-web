@@ -3,14 +3,12 @@ import {
   Odometer,
   Setting,
   User,
-  Goods,
+  Shop,
   Van,
   ShoppingCart,
   Sell,
   Box,
-  Fold,
 } from '@element-plus/icons-vue'
-import AppSidebar from './AppSidebar.vue'
 </script>
 
 <template>
@@ -41,8 +39,9 @@ import AppSidebar from './AppSidebar.vue'
           <span>用户管理</span>
         </el-menu-item>
       </el-sub-menu>
+
       <el-menu-item index="/dashboard/products">
-        <el-icon><Goods /></el-icon>
+        <el-icon><Shop /></el-icon>
         <span>商品管理</span>
       </el-menu-item>
 
