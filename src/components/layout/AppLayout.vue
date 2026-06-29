@@ -1,3 +1,22 @@
+<script setup lang="ts">
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import AppSidebar from './AppSidebar.vue'
+import { useUserStore } from '@/stores/user'
+import { Odometer, User, ArrowDown } from '@element-plus/icons-vue'
+
+const router = useRouter()
+const userStore = useUserStore()
+
+const handleCommand = (command: string) => {
+  if (command === 'logout') {
+    userStore.logout()
+    ElMessage.success('已退出')
+    router.push('/login')
+  }
+}
+</script>
+
 <template>
   <el-container class="app-layout">
     <!-- 侧边栏 -->
@@ -53,24 +72,6 @@
     </el-container>
   </el-container>
 </template>
-
-<script setup lang="ts">
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { useUserStore } from '@/stores/user'
-import { Odometer, User, ArrowDown } from '@element-plus/icons-vue'
-
-const router = useRouter()
-const userStore = useUserStore()
-
-const handleCommand = (command: string) => {
-  if (command === 'logout') {
-    userStore.logout()
-    ElMessage.success('已退出')
-    router.push('/login')
-  }
-}
-</script>
 
 <style scoped>
 .app-layout {

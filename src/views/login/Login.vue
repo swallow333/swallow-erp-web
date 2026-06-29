@@ -51,9 +51,7 @@ const handleLogin = async () => {
     const res = await request.post('/auth/login', form.value)
     // ✅ 正确：token 在 data.token 里
     if (res.code === 200 && res.data?.token) {
-      console.log('准备调用 setToken，token:', res.data.token)
       userStore.setToken(res.data.token)
-      console.log('调用完成，检查 localStorage:', localStorage.getItem('token'))
       userStore.setUserInfo(res.data.user)
       await nextTick()
       ElMessage.success('登录成功')

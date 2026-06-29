@@ -1,3 +1,18 @@
+<script setup lang="ts">
+import {
+  Odometer,
+  Setting,
+  User,
+  Goods,
+  Van,
+  ShoppingCart,
+  Sell,
+  Box,
+  Fold,
+} from '@element-plus/icons-vue'
+import AppSidebar from './AppSidebar.vue'
+</script>
+
 <template>
   <div class="sidebar-container">
     <div class="logo">
@@ -28,11 +43,11 @@
       </el-sub-menu>
       <el-menu-item index="/dashboard/products">
         <el-icon><Goods /></el-icon>
-        <span>商品列表</span>
+        <span>商品管理</span>
       </el-menu-item>
 
       <el-menu-item index="/dashboard/suppliers">
-        <el-icon><Truck /></el-icon>
+        <el-icon><Van /></el-icon>
         <span>供应商管理</span>
       </el-menu-item>
 
@@ -59,20 +74,6 @@
     </el-menu>
   </div>
 </template>
-
-<script setup lang="ts">
-import {
-  Odometer,
-  Setting,
-  User,
-  Goods,
-  Truck,
-  ShoppingCart,
-  Sell,
-  Box,
-  Fold,
-} from '@element-plus/icons-vue'
-</script>
 
 <style scoped>
 .sidebar-container {

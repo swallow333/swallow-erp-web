@@ -1,7 +1,9 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router' // 引入路由
 
+// 路由配置
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  // 路由映射表
   routes: [
     // 1. 根路径 → 重定向到登录页
     {
@@ -10,8 +12,8 @@ const router = createRouter({
     },
     // 2. 登录页（不需要登录）
     {
-      path: '/login',
-      name: 'Login',
+      path: '/login', // 路由路径
+      name: 'Login', // 路由名称
       component: () => import('@/views/login/Login.vue'),
     },
     // 3. 主布局（需要登录）
@@ -19,6 +21,7 @@ const router = createRouter({
       path: '/dashboard',
       component: () => import('@/components/layout/AppLayout.vue'),
       redirect: '/dashboard/index',
+      // 嵌套路由
       children: [
         {
           path: 'index',
@@ -66,4 +69,4 @@ router.beforeEach((to, _from, next) => {
   }
 })
 
-export default router
+export default router // 导出路由
