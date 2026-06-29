@@ -48,6 +48,16 @@ const router = createRouter({
           name: 'SupplierList',
           component: () => import('@/views/supplier/SupplierList.vue'),
         },
+        {
+          path: 'purchase-orders',
+          name: 'PurchaseOrderList',
+          component: () => import('@/views/purchase/PurchaseOrderList.vue'),
+        },
+        {
+          path: 'inventory',
+          name: 'InventoryList',
+          component: () => import('@/views/inventory/InventoryList.vue'),
+        },
         // 其他页面...
       ],
     },
