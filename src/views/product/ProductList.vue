@@ -127,6 +127,7 @@ const handleSubmit = async () => {
       imageUrl: formData.imageUrl,
       price: formData.price,
       costPrice: formData.costPrice,
+      status: formData.status,
       // ✅ 新增字段
       bulletPoints: formData.bulletPoints ? [formData.bulletPoints] : [],
       description: formData.description || '',

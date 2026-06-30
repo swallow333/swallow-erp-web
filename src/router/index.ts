@@ -76,17 +76,15 @@ const router = createRouter({
 })
 
 // 路由守卫：未登录跳转登录
-router.beforeEach((to, _from, next) => {
+router.beforeEach((to, _from) => {
   const token = localStorage.getItem('token')
   if (to.path === '/login') {
-    next()
-    return
+    return true // 放行
   }
   if (!token) {
-    next('/login')
-  } else {
-    next()
+    return '/login' // 重定向到登录页
   }
+  return true // 放行
 })
 
 export default router // 导出路由
