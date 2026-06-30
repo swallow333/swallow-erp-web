@@ -1,3 +1,188 @@
+<script setup lang="ts">
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  getProductPage,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  type Product,
+  type ProductQueryParams,
+} from '@/api/product'
+
+// ===== 搜索 =====
+const searchForm = reactive({
+  keyword: '',
+  status: undefined as number | undefined,
+})
+
+// ===== 表格 =====
+const tableData = ref<Product[]>([])
+const total = ref(0)
+const pageNum = ref(1)
+const pageSize = ref(10)
+const loading = ref(false)
+
+// ===== 弹窗 =====
+const dialogVisible = ref(false)
+const dialogTitle = ref('新增商品')
+const submitting = ref(false)
+const formRef = ref()
+const isEdit = ref(false)
+
+const formData = reactive({
+  id: 0,
+  asin: '',
+  sku: '',
+  title: '',
+  brand: '',
+  category: '',
+  imageUrl: '',
+  price: 0,
+  costPrice: 0,
+  status: 1,
+  // ✅ 添加这些字段（与 ProductCreateRequest 匹配）
+  bulletPoints: '', // 五点描述
+  description: '', // 详细描述
+  searchTerms: '', // 搜索关键词
+  variationTheme: '', // 变体主题
+  parentAsin: '', // 父ASIN
+})
+
+const rules = {
+  sku: [{ required: true, message: '请输入SKU', trigger: 'blur' }],
+  title: [{ required: true, message: '请输入商品名称', trigger: 'blur' }],
+  price: [{ required: true, message: '请输入售价', trigger: 'blur' }],
+}
+
+// ===== 加载数据 =====
+const loadData = async () => {
+  loading.value = true
+  try {
+    const params: ProductQueryParams = {
+      keyword: searchForm.keyword || undefined,
+      status: searchForm.status,
+      pageNum: pageNum.value,
+      pageSize: pageSize.value,
+    }
+    const res = await getProductPage(params)
+    tableData.value = res.data?.list || []
+    total.value = res.data?.total || 0
+  } catch (error) {
+    ElMessage.error('加载数据失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// ===== 搜索 =====
+const handleSearch = () => {
+  pageNum.value = 1
+  loadData()
+}
+
+const resetSearch = () => {
+  searchForm.keyword = ''
+  searchForm.status = undefined
+  pageNum.value = 1
+  loadData()
+}
+
+// ===== 新增 =====
+const openCreateDialog = () => {
+  isEdit.value = false
+  dialogTitle.value = '新增商品'
+  resetForm()
+  dialogVisible.value = true
+}
+
+// ===== 编辑 =====
+const openEditDialog = (row: Product) => {
+  isEdit.value = true
+  dialogTitle.value = '编辑商品'
+  formData.id = row.id
+  formData.asin = row.asin || ''
+  formData.sku = row.sku
+  formData.title = row.title
+  formData.brand = row.brand || ''
+  formData.category = row.category || ''
+  formData.imageUrl = row.imageUrl || ''
+  formData.price = row.price
+  formData.costPrice = row.costPrice || 0
+  formData.status = row.status
+  dialogVisible.value = true
+}
+
+// ===== 提交 =====
+const handleSubmit = async () => {
+  await formRef.value?.validate()
+  submitting.value = true
+  try {
+    const data = {
+      asin: formData.asin,
+      sku: formData.sku,
+      title: formData.title,
+      brand: formData.brand,
+      category: formData.category,
+      imageUrl: formData.imageUrl,
+      price: formData.price,
+      costPrice: formData.costPrice,
+      // ✅ 新增字段
+      bulletPoints: formData.bulletPoints ? [formData.bulletPoints] : [],
+      description: formData.description || '',
+      searchTerms: formData.searchTerms || '',
+      variationTheme: formData.variationTheme || '',
+      parentAsin: formData.parentAsin || '',
+    }
+    if (isEdit.value) {
+      await updateProduct(formData.id, data)
+      ElMessage.success('修改成功')
+    } else {
+      await createProduct(data)
+      ElMessage.success('新增成功')
+    }
+    dialogVisible.value = false
+    loadData()
+  } catch (error) {
+    // 错误已在拦截器处理
+  } finally {
+    submitting.value = false
+  }
+}
+
+// ===== 重置 =====
+const resetForm = () => {
+  formData.id = 0
+  formData.asin = ''
+  formData.sku = ''
+  formData.title = ''
+  formData.brand = ''
+  formData.category = ''
+  formData.imageUrl = ''
+  formData.price = 0
+  formData.costPrice = 0
+  formData.status = 1
+  formRef.value?.resetFields()
+}
+
+// ===== 删除 =====
+const handleDelete = async (row: Product) => {
+  try {
+    await ElMessageBox.confirm(`确认删除商品 "${row.title}" 吗？`, '提示', { type: 'error' })
+    await deleteProduct(row.id)
+    ElMessage.success('删除成功')
+    loadData()
+  } catch (error) {
+    // 取消
+  }
+}
+
+// ===== 生命周期 =====
+onMounted(() => {
+  loadData()
+})
+</script>
+
 <template>
   <div class="product-list">
     <el-card>
@@ -106,179 +291,6 @@
     </el-dialog>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  getProductPage,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-  type Product,
-  type ProductQueryParams,
-} from '@/api/product'
-
-// ===== 搜索 =====
-const searchForm = reactive({
-  keyword: '',
-  status: undefined as number | undefined,
-})
-
-// ===== 表格 =====
-const tableData = ref<Product[]>([])
-const total = ref(0)
-const pageNum = ref(1)
-const pageSize = ref(10)
-const loading = ref(false)
-
-// ===== 弹窗 =====
-const dialogVisible = ref(false)
-const dialogTitle = ref('新增商品')
-const submitting = ref(false)
-const formRef = ref()
-const isEdit = ref(false)
-
-const formData = reactive({
-  id: 0,
-  asin: '',
-  sku: '',
-  title: '',
-  brand: '',
-  category: '',
-  imageUrl: '',
-  price: 0,
-  costPrice: 0,
-  status: 1,
-})
-
-const rules = {
-  sku: [{ required: true, message: '请输入SKU', trigger: 'blur' }],
-  title: [{ required: true, message: '请输入商品名称', trigger: 'blur' }],
-  price: [{ required: true, message: '请输入售价', trigger: 'blur' }],
-}
-
-// ===== 加载数据 =====
-const loadData = async () => {
-  loading.value = true
-  try {
-    const params: ProductQueryParams = {
-      keyword: searchForm.keyword || undefined,
-      status: searchForm.status,
-      pageNum: pageNum.value,
-      pageSize: pageSize.value,
-    }
-    const res = await getProductPage(params)
-    tableData.value = res.data?.list || []
-    total.value = res.data?.total || 0
-  } catch (error) {
-    ElMessage.error('加载数据失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-// ===== 搜索 =====
-const handleSearch = () => {
-  pageNum.value = 1
-  loadData()
-}
-
-const resetSearch = () => {
-  searchForm.keyword = ''
-  searchForm.status = undefined
-  pageNum.value = 1
-  loadData()
-}
-
-// ===== 新增 =====
-const openCreateDialog = () => {
-  isEdit.value = false
-  dialogTitle.value = '新增商品'
-  resetForm()
-  dialogVisible.value = true
-}
-
-// ===== 编辑 =====
-const openEditDialog = (row: Product) => {
-  isEdit.value = true
-  dialogTitle.value = '编辑商品'
-  formData.id = row.id
-  formData.asin = row.asin || ''
-  formData.sku = row.sku
-  formData.title = row.title
-  formData.brand = row.brand || ''
-  formData.category = row.category || ''
-  formData.imageUrl = row.imageUrl || ''
-  formData.price = row.price
-  formData.costPrice = row.costPrice || 0
-  formData.status = row.status
-  dialogVisible.value = true
-}
-
-// ===== 提交 =====
-const handleSubmit = async () => {
-  await formRef.value?.validate()
-  submitting.value = true
-  try {
-    const data = {
-      asin: formData.asin,
-      sku: formData.sku,
-      title: formData.title,
-      brand: formData.brand,
-      category: formData.category,
-      imageUrl: formData.imageUrl,
-      price: formData.price,
-      costPrice: formData.costPrice,
-    }
-    if (isEdit.value) {
-      await updateProduct(formData.id, data)
-      ElMessage.success('修改成功')
-    } else {
-      await createProduct(data)
-      ElMessage.success('新增成功')
-    }
-    dialogVisible.value = false
-    loadData()
-  } catch (error) {
-    // 错误已在拦截器处理
-  } finally {
-    submitting.value = false
-  }
-}
-
-// ===== 重置 =====
-const resetForm = () => {
-  formData.id = 0
-  formData.asin = ''
-  formData.sku = ''
-  formData.title = ''
-  formData.brand = ''
-  formData.category = ''
-  formData.imageUrl = ''
-  formData.price = 0
-  formData.costPrice = 0
-  formData.status = 1
-  formRef.value?.resetFields()
-}
-
-// ===== 删除 =====
-const handleDelete = async (row: Product) => {
-  try {
-    await ElMessageBox.confirm(`确认删除商品 "${row.title}" 吗？`, '提示', { type: 'error' })
-    await deleteProduct(row.id)
-    ElMessage.success('删除成功')
-    loadData()
-  } catch (error) {
-    // 取消
-  }
-}
-
-// ===== 生命周期 =====
-onMounted(() => {
-  loadData()
-})
-</script>
 
 <style scoped>
 .product-list {

@@ -54,6 +54,11 @@ export const updatePurchaseOrderStatus = (
   return request.put(`/purchase-orders/${id}/status`, data)
 }
 
+// 创建入库单（采购入库）
+export const createStockIn = (data: any) => {
+  return request.post('/stock-in', data)
+}
+
 // 取消订单
 export const cancelPurchaseOrder = (id: number) => {
   return request.put(`/purchase-orders/${id}/cancel`)

@@ -1,3 +1,234 @@
+<script setup lang="ts">
+import { ref, reactive, onMounted, computed } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  getPurchaseOrderPage,
+  createPurchaseOrder,
+  updatePurchaseOrderStatus,
+  cancelPurchaseOrder,
+  getPurchaseOrderById,
+  createStockIn,
+  type PurchaseOrder,
+} from '@/api/purchase'
+import { getEnabledSuppliers } from '@/api/supplier'
+import { getProductList } from '@/api/product'
+
+// ===== 搜索 =====
+const searchForm = reactive({
+  orderNo: '',
+  status: undefined as number | undefined,
+})
+const tableData = ref<PurchaseOrder[]>([])
+const total = ref(0)
+const pageNum = ref(1)
+const pageSize = ref(10)
+const loading = ref(false)
+
+// ===== 供应商和商品列表 =====
+const supplierList = ref<any[]>([])
+const productList = ref<any[]>([])
+
+// ===== 状态 =====
+const getStatusName = (status: number) => {
+  const map: Record<number, string> = { 0: '草稿', 1: '已审核', 2: '已入库', 3: '已取消' }
+  return map[status] || '-'
+}
+const getStatusType = (status: number) => {
+  const map: Record<number, string> = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger' }
+  return map[status] || 'info'
+}
+
+// ===== 加载数据 =====
+const loadData = async () => {
+  loading.value = true
+  try {
+    const res = await getPurchaseOrderPage({
+      orderNo: searchForm.orderNo || undefined,
+      status: searchForm.status,
+      pageNum: pageNum.value,
+      pageSize: pageSize.value,
+    })
+    tableData.value = res.data?.list || []
+    total.value = res.data?.total || 0
+  } catch (error) {
+    ElMessage.error('加载数据失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleSearch = () => {
+  pageNum.value = 1
+  loadData()
+}
+const resetSearch = () => {
+  searchForm.orderNo = ''
+  searchForm.status = undefined
+  pageNum.value = 1
+  loadData()
+}
+
+// ===== 创建订单 =====
+const dialogVisible = ref(false)
+const submitting = ref(false)
+const formRef = ref()
+
+const formData = reactive({
+  supplierId: undefined as number | undefined,
+  remark: '',
+  details: [] as { productId: number; quantity: number; price: number }[],
+})
+
+const rules = {
+  supplierId: [{ required: true, message: '请选择供应商', trigger: 'change' }],
+}
+
+const totalAmount = computed(() => {
+  return formData.details.reduce((sum, d) => sum + d.quantity * d.price, 0)
+})
+
+const addDetail = () => {
+  formData.details.push({ productId: 0, quantity: 1, price: 0 })
+}
+const removeDetail = (index: number) => {
+  formData.details.splice(index, 1)
+}
+
+const resetForm = () => {
+  formData.supplierId = undefined
+  formData.remark = ''
+  formData.details = []
+  formRef.value?.resetFields()
+}
+
+const openCreateDialog = async () => {
+  // 加载供应商和商品列表
+  try {
+    const [suppliers, products] = await Promise.all([getEnabledSuppliers(), getProductList()])
+    supplierList.value = suppliers.data || []
+    productList.value = products.data || []
+  } catch (error) {
+    ElMessage.error('加载基础数据失败')
+    return
+  }
+  resetForm()
+  addDetail() // 默认添加一行
+  dialogVisible.value = true
+}
+
+const handleSubmit = async () => {
+  await formRef.value?.validate()
+  if (formData.details.length === 0) {
+    ElMessage.warning('请添加采购明细')
+    return
+  }
+  if (formData.details.some((d) => !d.productId || d.quantity <= 0 || d.price <= 0)) {
+    ElMessage.warning('请完善采购明细')
+    return
+  }
+
+  submitting.value = true
+  try {
+    await createPurchaseOrder({
+      supplierId: formData.supplierId,
+      remark: formData.remark,
+      details: formData.details,
+    })
+    ElMessage.success('创建成功')
+    dialogVisible.value = false
+    loadData()
+  } catch (error) {
+    // 错误已拦截
+  } finally {
+    submitting.value = false
+  }
+}
+
+// ===== 查看详情 =====
+const detailVisible = ref(false)
+const currentOrder = ref<PurchaseOrder | null>(null)
+
+const viewDetail = async (row: PurchaseOrder) => {
+  try {
+    const res = await getPurchaseOrderById(row.id)
+    currentOrder.value = res.data
+    detailVisible.value = true
+  } catch (error) {
+    ElMessage.error('加载详情失败')
+  }
+}
+
+// ===== 审核 =====
+const handleApprove = async (row: PurchaseOrder) => {
+  try {
+    await ElMessageBox.confirm(`确认审核订单 "${row.orderNo}" 吗？`, '提示', { type: 'warning' })
+    await updatePurchaseOrderStatus(row.id, { status: 1 })
+    ElMessage.success('审核成功')
+    loadData()
+  } catch (error) {}
+}
+
+// ===== 入库 =====
+const handleStockIn = async (row: PurchaseOrder) => {
+  try {
+    // 1. 确认入库
+    await ElMessageBox.confirm(`确认订单 "${row.orderNo}" 已入库？`, '提示', { type: 'warning' })
+
+    // 2. 获取订单详情（拿到商品明细）
+    const res = await getPurchaseOrderById(row.id)
+    const order = res.data as PurchaseOrder
+
+    // 3. 检查是否有明细
+    if (!order.details || order.details.length === 0) {
+      ElMessage.warning('该订单没有商品明细，无法入库')
+      return
+    }
+
+    // 4. 构造入库请求
+
+    const payload = {
+      purchaseOrderId: row.id,
+      details:
+        order.details?.map((d) => ({
+          productId: d.productId,
+          quantity: d.quantity,
+          price: d.price,
+        })) || [],
+    }
+
+    // 5. 调用创建入库单接口（会自动增加库存）
+    await createStockIn(payload)
+
+    ElMessage.success('入库成功')
+    loadData() // 刷新列表
+  } catch (error) {
+    // 用户取消或请求失败
+    // 1. 用户取消操作
+    if (error === 'cancel') return
+
+    // 2. 处理其他错误（Axios 错误或业务异常）
+    // 将 error 转换为 any 类型以便访问属性
+    const err = error as any
+    const message = err.response?.data?.message || err.message || '入库失败'
+    ElMessage.error(message)
+  }
+}
+
+// ===== 取消 =====
+const handleCancel = async (row: PurchaseOrder) => {
+  try {
+    await ElMessageBox.confirm(`确认取消订单 "${row.orderNo}" 吗？`, '提示', { type: 'error' })
+    await cancelPurchaseOrder(row.id)
+    ElMessage.success('取消成功')
+    loadData()
+  } catch (error) {}
+}
+
+onMounted(() => {
+  loadData()
+})
+</script>
+
 <template>
   <div class="purchase-order-list">
     <el-card>
@@ -179,200 +410,6 @@
     </el-dialog>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  getPurchaseOrderPage,
-  createPurchaseOrder,
-  updatePurchaseOrderStatus,
-  cancelPurchaseOrder,
-  getPurchaseOrderById,
-  type PurchaseOrder,
-} from '@/api/purchase'
-import { getEnabledSuppliers } from '@/api/supplier'
-import { getProductList } from '@/api/product'
-
-// ===== 搜索 =====
-const searchForm = reactive({
-  orderNo: '',
-  status: undefined as number | undefined,
-})
-const tableData = ref<PurchaseOrder[]>([])
-const total = ref(0)
-const pageNum = ref(1)
-const pageSize = ref(10)
-const loading = ref(false)
-
-// ===== 供应商和商品列表 =====
-const supplierList = ref<any[]>([])
-const productList = ref<any[]>([])
-
-// ===== 状态 =====
-const getStatusName = (status: number) => {
-  const map: Record<number, string> = { 0: '草稿', 1: '已审核', 2: '已入库', 3: '已取消' }
-  return map[status] || '-'
-}
-const getStatusType = (status: number) => {
-  const map: Record<number, string> = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger' }
-  return map[status] || 'info'
-}
-
-// ===== 加载数据 =====
-const loadData = async () => {
-  loading.value = true
-  try {
-    const res = await getPurchaseOrderPage({
-      orderNo: searchForm.orderNo || undefined,
-      status: searchForm.status,
-      pageNum: pageNum.value,
-      pageSize: pageSize.value,
-    })
-    tableData.value = res.data?.list || []
-    total.value = res.data?.total || 0
-  } catch (error) {
-    ElMessage.error('加载数据失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleSearch = () => {
-  pageNum.value = 1
-  loadData()
-}
-const resetSearch = () => {
-  searchForm.orderNo = ''
-  searchForm.status = undefined
-  pageNum.value = 1
-  loadData()
-}
-
-// ===== 创建订单 =====
-const dialogVisible = ref(false)
-const submitting = ref(false)
-const formRef = ref()
-
-const formData = reactive({
-  supplierId: undefined as number | undefined,
-  remark: '',
-  details: [] as { productId: number; quantity: number; price: number }[],
-})
-
-const rules = {
-  supplierId: [{ required: true, message: '请选择供应商', trigger: 'change' }],
-}
-
-const totalAmount = computed(() => {
-  return formData.details.reduce((sum, d) => sum + d.quantity * d.price, 0)
-})
-
-const addDetail = () => {
-  formData.details.push({ productId: 0, quantity: 1, price: 0 })
-}
-const removeDetail = (index: number) => {
-  formData.details.splice(index, 1)
-}
-
-const resetForm = () => {
-  formData.supplierId = undefined
-  formData.remark = ''
-  formData.details = []
-  formRef.value?.resetFields()
-}
-
-const openCreateDialog = async () => {
-  // 加载供应商和商品列表
-  try {
-    const [suppliers, products] = await Promise.all([getEnabledSuppliers(), getProductList()])
-    supplierList.value = suppliers.data || []
-    productList.value = products.data || []
-  } catch (error) {
-    ElMessage.error('加载基础数据失败')
-    return
-  }
-  resetForm()
-  addDetail() // 默认添加一行
-  dialogVisible.value = true
-}
-
-const handleSubmit = async () => {
-  await formRef.value?.validate()
-  if (formData.details.length === 0) {
-    ElMessage.warning('请添加采购明细')
-    return
-  }
-  if (formData.details.some((d) => !d.productId || d.quantity <= 0 || d.price <= 0)) {
-    ElMessage.warning('请完善采购明细')
-    return
-  }
-
-  submitting.value = true
-  try {
-    await createPurchaseOrder({
-      supplierId: formData.supplierId,
-      remark: formData.remark,
-      details: formData.details,
-    })
-    ElMessage.success('创建成功')
-    dialogVisible.value = false
-    loadData()
-  } catch (error) {
-    // 错误已拦截
-  } finally {
-    submitting.value = false
-  }
-}
-
-// ===== 查看详情 =====
-const detailVisible = ref(false)
-const currentOrder = ref<PurchaseOrder | null>(null)
-
-const viewDetail = async (row: PurchaseOrder) => {
-  try {
-    const res = await getPurchaseOrderById(row.id)
-    currentOrder.value = res.data
-    detailVisible.value = true
-  } catch (error) {
-    ElMessage.error('加载详情失败')
-  }
-}
-
-// ===== 审核 =====
-const handleApprove = async (row: PurchaseOrder) => {
-  try {
-    await ElMessageBox.confirm(`确认审核订单 "${row.orderNo}" 吗？`, '提示', { type: 'warning' })
-    await updatePurchaseOrderStatus(row.id, { status: 1 })
-    ElMessage.success('审核成功')
-    loadData()
-  } catch (error) {}
-}
-
-// ===== 入库 =====
-const handleStockIn = async (row: PurchaseOrder) => {
-  try {
-    await ElMessageBox.confirm(`确认订单 "${row.orderNo}" 已入库？`, '提示', { type: 'warning' })
-    await updatePurchaseOrderStatus(row.id, { status: 2 })
-    ElMessage.success('入库成功')
-    loadData()
-  } catch (error) {}
-}
-
-// ===== 取消 =====
-const handleCancel = async (row: PurchaseOrder) => {
-  try {
-    await ElMessageBox.confirm(`确认取消订单 "${row.orderNo}" 吗？`, '提示', { type: 'error' })
-    await cancelPurchaseOrder(row.id)
-    ElMessage.success('取消成功')
-    loadData()
-  } catch (error) {}
-}
-
-onMounted(() => {
-  loadData()
-})
-</script>
 
 <style scoped>
 .purchase-order-list {
