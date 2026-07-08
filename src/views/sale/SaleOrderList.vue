@@ -16,7 +16,7 @@
         <el-form-item label="客户名称">
           <el-input v-model="searchForm.customerName" placeholder="请输入" clearable />
         </el-form-item>
-        <el-form-item label="状态">
+        <el-form-item label="状态" style="width: 120px">
           <el-select v-model="searchForm.status" placeholder="全部" clearable>
             <el-option label="草稿" :value="0" />
             <el-option label="已审核" :value="1" />

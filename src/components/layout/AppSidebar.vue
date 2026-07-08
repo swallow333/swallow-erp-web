@@ -77,7 +77,7 @@ import {
 <style scoped>
 .sidebar-container {
   height: 100vh;
-  background: #001529;
+  background: #3b85ca;
   display: flex;
   flex-direction: column;
 }

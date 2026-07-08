@@ -199,7 +199,7 @@ onMounted(() => {
         <el-form-item label="关键词">
           <el-input v-model="searchForm.keyword" placeholder="商品名称/SKU" clearable />
         </el-form-item>
-        <el-form-item label="状态">
+        <el-form-item label="状态" style="width: 120px">
           <el-select v-model="searchForm.status" placeholder="全部" clearable>
             <el-option label="在售" :value="1" />
             <el-option label="停售" :value="0" />

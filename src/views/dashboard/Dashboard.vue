@@ -1,3 +1,157 @@
+<script setup lang="ts">
+import { ref, onMounted, nextTick, computed } from 'vue'
+import * as echarts from 'echarts'
+import { ElMessage } from 'element-plus'
+import { getDashboardStatistics, type DashboardStatistics } from '@/api/dashboard'
+
+// ========== 数据 ==========
+const statistics = ref<any>(null)
+const loading = ref(false)
+const chartRef = ref<HTMLDivElement>()
+
+// ========== 统计卡片配置 ==========
+const statCards = ref([
+  { title: '总销售额', value: '¥0', icon: 'Money', color: '#409eff' },
+  { title: '总订单数', value: '0', icon: 'Document', color: '#67c23a' },
+  { title: '总商品数', value: '0', icon: 'Goods', color: '#e6a23c' },
+  { title: '待处理', value: '0', icon: 'Bell', color: '#f56c6c' },
+])
+
+// ===== 加载数据 =====
+const loadData = async () => {
+  loading.value = true
+  try {
+    const res = await getDashboardStatistics()
+    console.log('仪表盘数据:', res)
+
+    // ✅ 根据实际后端返回结构调整
+    // 如果后端直接返回数据对象，用 res
+    // 如果后端返回 { code, data }，用 res.data
+    const data = res.data || res
+
+    // ✅ 检查数据是否有效
+    if (!data || typeof data !== 'object') {
+      throw new Error('数据格式异常')
+    }
+
+    statistics.value = data
+
+    // 更新统计卡片
+    statCards.value = [
+      {
+        title: '总销售额',
+        value: `¥${data.totalSales?.toFixed(2) || '0.00'}`,
+        icon: 'Money',
+        color: '#409eff',
+      },
+      {
+        title: '总订单数',
+        value: String(data.totalOrders || 0),
+        icon: 'Document',
+        color: '#67c23a',
+      },
+      {
+        title: '总商品数',
+        value: String(data.totalProducts || 0),
+        icon: 'Goods',
+        color: '#e6a23c',
+      },
+      {
+        title: '待处理',
+        value: String((data.pendingOrders || 0) + (data.pendingPurchaseOrders || 0)),
+        icon: 'Bell',
+        color: '#f56c6c',
+      },
+    ]
+
+    // 渲染图表
+    await nextTick()
+    renderChart()
+  } catch (error) {
+    console.error('加载仪表盘数据失败:', error)
+  }
+}
+
+// ========== 渲染图表 ==========
+const renderChart = () => {
+  if (!chartRef.value) return
+
+  const chart = echarts.init(chartRef.value)
+
+  const trend = statistics.value?.salesTrend || []
+  const dates = trend.map((item) => item.date)
+  const amounts = trend.map((item) => item.amount)
+
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: any) => {
+        const p = params[0]
+        return `${p.name}<br/>销售额：¥${p.value?.toFixed(2) || 0}`
+      },
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      top: '10%',
+      containLabel: true,
+    },
+    xAxis: {
+      type: 'category',
+      data: dates.length ? dates : ['暂无数据'],
+      boundaryGap: false,
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        formatter: '¥{value}',
+      },
+    },
+    series: [
+      {
+        type: 'line',
+        smooth: true,
+        data: amounts.length ? amounts : [0],
+        lineStyle: {
+          color: '#409eff',
+          width: 3,
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
+            { offset: 1, color: 'rgba(64, 158, 255, 0.05)' },
+          ]),
+        },
+        itemStyle: {
+          color: '#409eff',
+        },
+      },
+    ],
+  })
+
+  // 自适应
+  window.addEventListener('resize', () => chart.resize())
+}
+
+// ========== 工具方法 ==========
+const getStatusType = (status: string) => {
+  const map: Record<string, string> = {
+    草稿: 'info',
+    已审核: 'warning',
+    已发货: 'primary',
+    已完成: 'success',
+    已取消: 'danger',
+  }
+  return map[status] || 'info'
+}
+
+// ========== 生命周期 ==========
+onMounted(() => {
+  loadData()
+})
+</script>
+
 <template>
   <div class="dashboard">
     <!-- 顶部四个统计卡片 -->
@@ -98,140 +252,6 @@
     </el-row>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
-import * as echarts from 'echarts'
-import { getDashboardStatistics, type DashboardStatistics } from '@/api/dashboard'
-
-// ========== 数据 ==========
-const statistics = ref<DashboardStatistics | null>(null)
-const chartRef = ref<HTMLDivElement>()
-
-// ========== 统计卡片配置 ==========
-const statCards = ref([
-  { title: '总销售额', value: '¥0', icon: 'Money', color: '#409eff' },
-  { title: '总订单数', value: '0', icon: 'Document', color: '#67c23a' },
-  { title: '总商品数', value: '0', icon: 'Goods', color: '#e6a23c' },
-  { title: '待处理', value: '0', icon: 'Bell', color: '#f56c6c' },
-])
-
-// ========== 加载数据 ==========
-const loadData = async () => {
-  try {
-    const res = await getDashboardStatistics()
-    statistics.value = res
-
-    // 更新统计卡片
-    statCards.value = [
-      {
-        title: '总销售额',
-        value: `¥${res.totalSales?.toFixed(2) || '0'}`,
-        icon: 'Money',
-        color: '#409eff',
-      },
-      {
-        title: '总订单数',
-        value: String(res.totalOrders || 0),
-        icon: 'Document',
-        color: '#67c23a',
-      },
-      { title: '总商品数', value: String(res.totalProducts || 0), icon: 'Goods', color: '#e6a23c' },
-      {
-        title: '待处理',
-        value: String((res.pendingOrders || 0) + (res.pendingPurchaseOrders || 0)),
-        icon: 'Bell',
-        color: '#f56c6c',
-      },
-    ]
-
-    // 渲染图表
-    await nextTick()
-    renderChart()
-  } catch (error) {
-    console.error('加载仪表盘数据失败:', error)
-  }
-}
-
-// ========== 渲染图表 ==========
-const renderChart = () => {
-  if (!chartRef.value) return
-
-  const chart = echarts.init(chartRef.value)
-
-  const trend = statistics.value?.salesTrend || []
-  const dates = trend.map((item) => item.date)
-  const amounts = trend.map((item) => item.amount)
-
-  chart.setOption({
-    tooltip: {
-      trigger: 'axis',
-      formatter: (params: any) => {
-        const p = params[0]
-        return `${p.name}<br/>销售额：¥${p.value?.toFixed(2) || 0}`
-      },
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      top: '10%',
-      containLabel: true,
-    },
-    xAxis: {
-      type: 'category',
-      data: dates.length ? dates : ['暂无数据'],
-      boundaryGap: false,
-    },
-    yAxis: {
-      type: 'value',
-      axisLabel: {
-        formatter: '¥{value}',
-      },
-    },
-    series: [
-      {
-        type: 'line',
-        smooth: true,
-        data: amounts.length ? amounts : [0],
-        lineStyle: {
-          color: '#409eff',
-          width: 3,
-        },
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
-            { offset: 1, color: 'rgba(64, 158, 255, 0.05)' },
-          ]),
-        },
-        itemStyle: {
-          color: '#409eff',
-        },
-      },
-    ],
-  })
-
-  // 自适应
-  window.addEventListener('resize', () => chart.resize())
-}
-
-// ========== 工具方法 ==========
-const getStatusType = (status: string) => {
-  const map: Record<string, string> = {
-    草稿: 'info',
-    已审核: 'warning',
-    已发货: 'primary',
-    已完成: 'success',
-    已取消: 'danger',
-  }
-  return map[status] || 'info'
-}
-
-// ========== 生命周期 ==========
-onMounted(() => {
-  loadData()
-})
-</script>
 
 <style scoped>
 .dashboard {
