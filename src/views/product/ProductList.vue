@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { usePagination } from '@/composables/usePagination'
 import {
   getProductPage,
   createProduct,
@@ -17,10 +18,8 @@ const searchForm = reactive({
 })
 
 // ===== 表格 =====
-const tableData = ref<Product[]>([])
-const total = ref(0)
-const pageNum = ref(1)
-const pageSize = ref(10)
+const { pageNum, pageSize, total, pageSizes, resetPage } = usePagination()
+const tableData = ref([])
 const loading = ref(false)
 
 // ===== 弹窗 =====
@@ -65,7 +64,7 @@ const loadData = async () => {
       pageNum: pageNum.value,
       pageSize: pageSize.value,
     }
-    const res = await getProductPage(params)
+    const res = await getProductPage(params) // 等待异步请求完成，拿到后端返回的响应对象
     tableData.value = res.data?.list || []
     total.value = res.data?.total || 0
   } catch (error) {
@@ -74,10 +73,11 @@ const loadData = async () => {
     loading.value = false
   }
 }
+onMounted(loadData)
 
 // ===== 搜索 =====
 const handleSearch = () => {
-  pageNum.value = 1
+  resetPage()
   loadData()
 }
 
@@ -244,6 +244,7 @@ onMounted(() => {
         v-model:current-page="pageNum"
         v-model:page-size="pageSize"
         :total="total"
+        :page-sizes="pageSizes"
         @current-change="loadData"
         @size-change="loadData"
         layout="total, sizes, prev, pager, next"

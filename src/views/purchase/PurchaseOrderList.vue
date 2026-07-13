@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { usePagination } from '@/composables/usePagination'
 import {
   getPurchaseOrderPage,
   createPurchaseOrder,
@@ -18,10 +19,8 @@ const searchForm = reactive({
   orderNo: '',
   status: undefined as number | undefined,
 })
-const tableData = ref<PurchaseOrder[]>([])
-const total = ref(0)
-const pageNum = ref(1)
-const pageSize = ref(10)
+const { pageNum, pageSize, total, pageSizes, resetPage } = usePagination()
+const tableData = ref([])
 const loading = ref(false)
 
 // ===== 供应商和商品列表 =====
@@ -58,13 +57,13 @@ const loadData = async () => {
 }
 
 const handleSearch = () => {
-  pageNum.value = 1
+  resetPage()
   loadData()
 }
 const resetSearch = () => {
   searchForm.orderNo = ''
   searchForm.status = undefined
-  pageNum.value = 1
+  resetPage()
   loadData()
 }
 
@@ -308,6 +307,7 @@ onMounted(() => {
         v-model:current-page="pageNum"
         v-model:page-size="pageSize"
         :total="total"
+        :page-sizes="pageSizes"
         @current-change="loadData"
         @size-change="loadData"
         layout="total, sizes, prev, pager, next"

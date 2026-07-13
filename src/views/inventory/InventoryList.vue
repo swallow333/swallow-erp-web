@@ -69,6 +69,7 @@
         v-model:current-page="pageNum"
         v-model:page-size="pageSize"
         :total="total"
+        :page-sizes="pageSizes"
         @current-change="loadData"
         @size-change="loadData"
         layout="total, sizes, prev, pager, next"
@@ -126,6 +127,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { usePagination } from '@/composables/usePagination'
 import { getInventoryPage, getStockFlows, type Inventory, type StockFlow } from '@/api/inventory'
 
 // ===== 搜索 =====
@@ -133,10 +135,8 @@ const searchForm = reactive({
   keyword: '',
   onlyLowStock: false,
 })
-const tableData = ref<Inventory[]>([])
-const total = ref(0)
-const pageNum = ref(1)
-const pageSize = ref(10)
+const { pageNum, pageSize, total, pageSizes, resetPage } = usePagination()
+const tableData = ref([])
 const loading = ref(false)
 
 // ===== 库存流水 =====
@@ -170,7 +170,7 @@ const loadData = async () => {
 
 // ===== 搜索 =====
 const handleSearch = () => {
-  pageNum.value = 1
+  resetPage()
   loadData()
 }
 const resetSearch = () => {

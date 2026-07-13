@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { usePagination } from '@/composables/usePagination'
 import {
   getUserPage,
   createUser,
@@ -11,17 +12,18 @@ import {
 } from '@/api/user'
 
 // ===== 搜索表单 =====
+// 来自搜索栏的数据（用户输入的关键词、选中的状态等）
 const searchForm = reactive({
   keyword: '',
   status: undefined as number | undefined,
 })
 
 // ===== 表格数据 =====
-const tableData = ref<SysUser[]>([])
-const total = ref(0)
-const pageNum = ref(1)
-const pageSize = ref(10)
-const loading = ref(false)
+
+// 1. 使用分页组合式函数
+const { pageNum, pageSize, total, pageSizes, resetPage } = usePagination()
+const tableData = ref([])
+const loading = ref(false) // ref 把普通值（如 false、0、""）包装成一个对象，让 Vue 能够追踪它的变化
 
 // ===== 弹窗 =====
 const dialogVisible = ref(false)
@@ -47,7 +49,7 @@ const rules = {
 
 // ===== 加载数据 =====
 const loadData = async () => {
-  loading.value = true
+  loading.value = true // 请求开始前显示加载状态
   try {
     const res = await getUserPage({
       keyword: searchForm.keyword || undefined,
@@ -60,20 +62,14 @@ const loadData = async () => {
   } catch (error) {
     ElMessage.error('加载数据失败')
   } finally {
-    loading.value = false
+    loading.value = false // 请求结束后隐藏加载状态
   }
 }
-
-const dynamicPageSizes = computed(() => {
-  const defaultSizes = [10, 20, 50, 100]
-  // 只保留小于等于总数据量的选项，且至少保留一个最小选项
-  const validSizes = defaultSizes.filter((size) => size <= total.value)
-  return validSizes.length > 0 ? validSizes : [total.value || 10]
-})
+onMounted(loadData)
 
 // ===== 搜索 =====
 const handleSearch = () => {
-  pageNum.value = 1
+  resetPage()
   loadData()
 }
 
@@ -236,7 +232,7 @@ onMounted(() => {
         v-model:current-page="pageNum"
         v-model:page-size="pageSize"
         :total="total"
-        :page-sizes="dynamicPageSizes"
+        :page-sizes="pageSizes"
         @current-change="loadData"
         @size-change="loadData"
         layout="total, sizes, prev, pager, next"
